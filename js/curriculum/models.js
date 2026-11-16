@@ -1,10 +1,13 @@
-// 3D models shown with "See it in 3D". Each is a Sketchfab model under Creative Commons Attribution
-// (CC BY 4.0), which allows use with credit, so every viewer shows its credit line.
+// 3D models shown with "See it in 3D", in Sketchfab's own viewer, each with a credit line.
+// Most are Creative Commons Attribution (CC BY 4.0). A model marked `embedOnly` has no Creative
+// Commons license: it may be shown in Sketchfab's viewer, which Sketchfab allows for any model that
+// can be embedded, but not downloaded or reused, so its credit has no license label.
 // A model loads only when a student presses the button, so pages stay quick on Chromebooks.
 // The teacher can switch any model off on the 3D models page (stored in the Settings tab).
 export const MODELS = {
   desktop: { uid: 'd1d8282c9916438091f11aeb28787b66', name: 'Gaming Desktop PC', author: 'Yolala3d', shows: 'A whole desktop computer' },
-  components: { uid: '4daeb72925d140809bdfd51634a1908e', name: 'Computer Components', author: 'crimsonfalcon', shows: 'The main parts laid out side by side' },
+  // Chosen by the teacher. It is detailed (about 575,000 faces), so it may load slowly on Chromebooks.
+  components: { uid: 'bd6fb0ed93f3475b890a099fedecf351', name: 'Computer Parts ( Built PC )', author: 'DanielCardonaArt', shows: 'The parts of a built computer', embedOnly: true },
   motherboard: { uid: '3bc94057328243d4b341a55f59160f8a', name: 'MotherBoard + Components', author: 'DanielCardonaArt', shows: 'A motherboard with parts plugged in' },
   cpu: { uid: '26d2147e082648949b9c703c514e6901', name: 'Unmarked processor (CPU) + Socket', author: '0004707', shows: 'A CPU and the socket it sits in' },
   ram: { uid: 'ab2b1c25c31b44c1a757911734bdf942', name: 'Random Access Memory - RAM Stick - PC', author: 'empty_mirror', shows: 'A stick of RAM' },

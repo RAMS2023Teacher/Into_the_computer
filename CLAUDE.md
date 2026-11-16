@@ -61,7 +61,7 @@ The tests enforce: step minutes plus `finishMins` equal the lesson's minutes (an
 
 ### 3D models
 
-`js/curriculum/models.js` lists Sketchfab models, all CC BY, each shown with its credit. A model loads only when a student presses "See it in 3D". The teacher can switch any off; the list is stored in the `Settings` tab and sent with the session.
+`js/curriculum/models.js` lists Sketchfab models, each shown in Sketchfab's viewer with its credit. Most are CC BY; `embedOnly` marks one with no Creative Commons license, which may be embedded but not downloaded or reused. A model loads only when a student presses "See it in 3D". The teacher can switch any off; the list is stored in the `Settings` tab and sent with the session.
 
 ## Not yet verified
 

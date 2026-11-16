@@ -30,7 +30,7 @@ export async function viewModels() {
     if (await attempt(() => app.store.setModelsOff([...next]))) { await refreshSession(); toast('Saved. Students see the change next time they open a page.'); render(); }
   };
   return h('div.stack',
-    h('div', h('h1', '3D models'), h('p.muted', `Students can open these with "See it in 3D." Each one loads from Sketchfab only when a student presses the button, and each is shared under ${LICENSE.name}, which allows use with credit. The credit shows under every model.`)),
+    h('div', h('h1', '3D models'), h('p.muted', `Students can open these with "See it in 3D." Each one loads from Sketchfab only when a student presses the button, and the credit shows under every model. Most are shared under ${LICENSE.name}, which allows use with credit.`)),
     !owner && h('p.warn', 'Only the teacher who set up the app can switch models on or off.'),
     h('p.small.muted', 'Preview each one before class. If your school blocks Sketchfab, students see a note instead and every lesson still works.'),
     h('div.model-grid', Object.entries(MODELS).map(([key, m]) => h('article.card.stack.model-card', { class: off.has(key) ? 'off' : '' },

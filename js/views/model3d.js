@@ -10,7 +10,7 @@ export function creditLine(key) {
   const m = MODELS[key];
   return h('p.model-credit',
     '3D model: ', h('a', { href: pageUrl(key), target: '_blank', rel: 'noopener noreferrer' }, `"${m.name}"`),
-    ` by ${m.author}, `, h('a', { href: LICENSE.url, target: '_blank', rel: 'noopener noreferrer' }, LICENSE.name), ', on Sketchfab.');
+    ` by ${m.author}`, m.embedOnly ? ', shown in Sketchfab\'s viewer.' : [', ', h('a', { href: LICENSE.url, target: '_blank', rel: 'noopener noreferrer' }, LICENSE.name), ', on Sketchfab.']);
 }
 
 export function openModel(key) {

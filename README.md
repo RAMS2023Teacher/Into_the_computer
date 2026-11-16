@@ -121,7 +121,7 @@ Each lesson lists its Massachusetts Grades 6-8 Digital Literacy and Computer Sci
 
 ## 3D models
 
-Twenty models from Sketchfab illustrate parts and historic computers. Each is shared under the Creative Commons Attribution license (CC BY 4.0), which allows use with credit, and the credit shows under every model. A model loads only when a student presses **See it in 3D**, so lessons stay quick on Chromebooks. On the **3D models** page you can preview each one and switch any off for everyone.
+Twenty models from Sketchfab illustrate parts and historic computers, each shown in Sketchfab's own viewer with its creator's credit. Nineteen are shared under the Creative Commons Attribution license (CC BY 4.0), which allows use with credit. The one you chose for the parts of a built computer has no Creative Commons license, which is fine for showing it in Sketchfab's viewer but means it can't be downloaded or reused. It is very detailed, so it may load slowly on Chromebooks. A model loads only when a student presses **See it in 3D**, so lessons stay quick on Chromebooks. On the **3D models** page you can preview each one and switch any off for everyone.
 
 ## How it protects students
 
