@@ -679,3 +679,13 @@ body.projecting .page { max-width: none; padding: 0; }
   .step-card h2 { font-size: 1.7rem; }
   .step-do { font-size: 1.08rem; }
 }
+
+/* History project: websites and sentence frames */
+.link-card { text-decoration: none; color: var(--ink); padding: 14px 10px; align-items: center; text-align: center; gap: 6px; }
+.link-card:hover { background: var(--paper-2); }
+.link-card.open { border-color: var(--ok); }
+.look-for { background: var(--paper-2); border-left: 6px solid var(--sun); padding: 8px 12px; }
+.look-for ul { margin: 4px 0 0; padding-left: 20px; }
+.frame { font-size: 1.15rem; line-height: 2.4; }
+.frame .blank { font: inherit; font-size: 1rem; margin: 0 4px; padding: 4px 8px; border-width: 0 0 3px; border-radius: 0; background: var(--paper-2); min-width: 8em; max-width: 100%; }
+.frame .blank:focus { background: #fff7d1; }

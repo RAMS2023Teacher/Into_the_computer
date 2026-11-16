@@ -8,7 +8,6 @@ import { ALIGNMENT, alignmentFor } from '../js/curriculum/alignment.js';
 import { MODELS } from '../js/curriculum/models.js';
 import { CATEGORIES, BUDGET, PURPOSES, HISTORY, buildTotal, buildProblems, missingParts } from '../js/curriculum/catalog.js';
 import { CASE_SPOTS } from '../js/curriculum/pictures.js';
-import { citationText, mlaDate, sourceMissing } from '../js/curriculum/mla.js';
 import { TYPES, isDone, solve, initialState, summaryOf, words, loadSeconds, SPEED_START } from '../js/activities/logic.js';
 import { cleanLink_ } from '../js/shared/links.js';
 import { RANKS, BADGES, TEACHER_BADGES, statsFor, XP } from '../js/game/rules.js';
@@ -25,29 +24,20 @@ test('there are five lessons, in order, and the server knows the same ids', () =
   assert.match(code, /const TRACKS = \['design', 'history'\];/);
 });
 
-test('lessons 1 to 4 each fit a 30 to 40 minute class, and their steps add up', () => {
-  for (const l of LESSONS.filter((x) => !x.tracks)) {
+test('every lesson fits a 30 to 40 minute class, and its steps add up', () => {
+  for (const l of LESSONS) {
     assert.ok(l.mins >= 30 && l.mins <= 40, `${l.id} is ${l.mins} minutes`);
-    const sum = l.steps.reduce((a, s) => a + s.mins, 0) + l.finishMins;
-    assert.equal(sum, l.mins, `${l.id}: steps and finishing add to ${sum}, not ${l.mins}`);
+    for (const track of tracksOf(l)) {
+      const sum = stepsFor(l, track).reduce((a, s) => a + s.mins, 0) + l.finishMins;
+      assert.equal(sum, l.mins, `${l.id} ${track}: steps and finishing add to ${sum}, not ${l.mins}`);
+    }
   }
 });
 
-test('the project is three class periods, and each day of each track adds up to one period', () => {
+test('the project is one class period, with no leftover days', () => {
   const p = LESSONS.find((l) => l.tracks);
-  assert.equal(p.periods, 3);
-  const period = p.mins / p.periods;
-  assert.ok(period >= 30 && period <= 40);
-  for (const [name, t] of Object.entries(p.tracks)) {
-    for (const day of [1, 2, 3]) {
-      const steps = [p.choose, ...t.steps].filter((s) => s.day === day);
-      assert.ok(steps.length, `${name} has no day ${day}`);
-      const sum = steps.reduce((a, s) => a + s.mins, 0) + (day === 3 ? p.finishMins : 0);
-      assert.equal(sum, period, `${name}, day ${day}: ${sum} minutes, not ${period}`);
-    }
-    const days = t.steps.map((s) => s.day);
-    assert.deepEqual(days, [...days].sort(), `${name}: days must run in order`);
-  }
+  assert.equal(p.periods, undefined);
+  for (const s of allSteps(p)) assert.equal(s.day, undefined, `${s.id} still has a day`);
 });
 
 test('every instruction is 26 words or fewer, and every step has an explanation under "Why?"', () => {
@@ -136,8 +126,9 @@ test('graded sorts only finish with every card in the right place', () => {
 });
 
 test('activities that need a minimum number of words are not finished by a word or two', () => {
-  const write = LESSONS.flatMap(allSteps).find((s) => s.id === 'pitch').activity;
-  assert.equal(isDone(write, { text: { pitch: 'good computer' } }), false);
+  const purpose = LESSONS.flatMap(allSteps).find((s) => s.id === 'purpose').activity;
+  assert.equal(isDone(purpose, { pick: 'gaming', text: 'my friend' }), false);
+  assert.equal(isDone(purpose, { pick: 'gaming', text: 'My cousin who plays new games every weekend' }), true);
   assert.equal(words('It is fast, and it costs $2,400.'), 7);
 });
 
@@ -167,17 +158,16 @@ test('the case picture has a spot for every part the case activities use', () =>
   }
 });
 
-test('the $2,500 budget forces trade-offs, but every purpose has a build that fits', () => {
+test('the $3,000 budget forces trade-offs, but every purpose has a build that fits', () => {
+  assert.equal(BUDGET, 3000);
   const best = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.many ? c.options.map((o) => o.id) : [...c.options].sort((a, b) => b.price - a.price)[0].id]));
   assert.ok(buildTotal(best) > BUDGET, 'the best of everything should not fit');
-  const cheap = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.many ? [] : [...c.options].sort((a, b) => a.price - b.price)[0].id]));
-  assert.ok(buildTotal(cheap) < BUDGET / 2);
   const builds = {
-    gaming: { cpu: 'cpu-fast', ram: 'ram-16', storage: 'ssd-2', graphics: 'gpu-top', board: 'board-basic', power: 'psu-850', case: 'case-tower', screen: 'screen-big', extras: ['keys', 'speakers', 'wifi'] },
-    school: { cpu: 'cpu-basic', ram: 'ram-8', storage: 'ssd-1', graphics: 'gpu-none', board: 'board-basic', power: 'battery', case: 'case-laptop', screen: 'screen-laptop', extras: ['keys', 'camera', 'mic', 'speakers', 'wifi'] },
-    video: { cpu: 'cpu-super', ram: 'ram-32', storage: 'ssd-4', graphics: 'gpu-mid', board: 'board-pro', power: 'psu-550', case: 'case-tower', screen: 'screen-big', extras: ['keys', 'speakers'] },
-    rover: { cpu: 'cpu-fast', ram: 'ram-16', storage: 'ssd-1', graphics: 'gpu-none', board: 'board-tiny', power: 'solar', case: 'case-rugged', screen: 'screen-none', extras: ['camera', 'sensors', 'gps', 'motors', 'wifi'] },
-    pets: { cpu: 'cpu-basic', ram: 'ram-8', storage: 'ssd-1', graphics: 'gpu-none', board: 'board-tiny', power: 'psu-550', case: 'case-mini', screen: 'screen-small', extras: ['camera', 'sensors', 'motors', 'wifi'] },
+    gaming: { cpu: 'r7-9800x3d', ram: 'ram-32', storage: 'ssd-2', graphics: 'rtx-5070', board: 'b650', power: 'rm650e', case: 'h5-flow', screen: 'monitor-27', extras: ['keys', 'speakers'] },
+    school: { cpu: 'i3-14100', ram: 'ram-8', storage: 'ssd-1', graphics: 'gpu-none', board: 'b760m', power: 'battery', case: 'case-laptop', screen: 'screen-laptop', extras: ['camera', 'mic', 'speakers'] },
+    video: { cpu: 'r9-9950x', ram: 'ram-32', storage: 'ssd-4', graphics: 'rtx-5060', board: 'b650', power: 'rm650e', case: 'h5-flow', screen: 'monitor-27', extras: ['keys', 'speakers'] },
+    rover: { cpu: 'r5-9600x', ram: 'ram-16', storage: 'ssd-1', graphics: 'gpu-none', board: 'b650i', power: 'solar', case: 'case-rugged', screen: 'screen-none', extras: ['camera', 'sensors', 'gps', 'motors', 'wifi'] },
+    pets: { cpu: 'r5-9600x', ram: 'ram-8', storage: 'ssd-1', graphics: 'gpu-none', board: 'b650i', power: 'rm650e', case: 'nr200p', screen: 'pi-touch', extras: ['camera', 'sensors', 'motors', 'wifi'] },
   };
   for (const p of PURPOSES.filter((x) => x.id !== 'own')) {
     const b = builds[p.id];
@@ -186,27 +176,36 @@ test('the $2,500 budget forces trade-offs, but every purpose has a build that fi
     assert.deepEqual(buildProblems(b), [], p.id);
     assert.ok(buildTotal(b) <= BUDGET, `${p.id} costs ${buildTotal(b)}`);
   }
-  assert.ok(buildProblems({ graphics: 'gpu-top', power: 'psu-550' }).length > 0);
+  // The rules a real build follows.
+  assert.ok(buildProblems({ graphics: 'rtx-5080', power: 'rm650e' }).length > 0, '5080 needs 850 W');
+  assert.ok(buildProblems({ cpu: 'i3-14100', board: 'b650' }).length > 0, 'Intel CPU on an AMD board');
+  assert.ok(buildProblems({ cpu: 'r5-9600x', board: 'b760m' }).length > 0, 'AMD CPU on an Intel board');
+  assert.ok(buildProblems({ case: 'nr200p', board: 'b650' }).length > 0, 'mini case with a full-size board');
+  // Every part has a real price, and every option id is unique.
+  const ids = CATEGORIES.flatMap((c) => c.options.map((o) => o.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const c of CATEGORIES) for (const o of c.options) assert.ok(Number.isInteger(o.price) && o.price >= 0, o.id);
 });
 
-test('MLA citations are built in the right order and format', () => {
-  assert.equal(mlaDate('2024-03-05'), '5 Mar. 2024');
-  assert.equal(mlaDate('2024-09'), 'Sept. 2024');
-  assert.equal(mlaDate('1999'), '1999');
-  assert.equal(mlaDate('March 5, 2024'), '5 Mar. 2024');
-  assert.equal(mlaDate('3/5/2024'), '5 Mar. 2024');
-  assert.equal(mlaDate('June 2021'), 'June 2021');
-  assert.equal(mlaDate('sept 9 2019'), '9 Sept. 2019');
-  assert.equal(mlaDate('a while ago'), 'a while ago');
-  assert.equal(citationText({ type: 'web', first: 'Jane', last: 'Smith', title: 'The ENIAC Story', container: 'Computer History Museum', date: '2024-03-05', url: 'https://www.computerhistory.org/eniac/', accessed: '2026-11-10' }),
-    'Smith, Jane. "The ENIAC Story." Computer History Museum, 5 Mar. 2024, www.computerhistory.org/eniac. Accessed 10 Nov. 2026.');
-  assert.equal(citationText({ type: 'video', title: 'How ENIAC Worked', container: 'YouTube', publisher: 'Museum Channel', date: '2021-06-01', url: 'https://youtu.be/abc' }),
-    '"How ENIAC Worked." YouTube, uploaded by Museum Channel, 1 June 2021, youtu.be/abc.');
-  assert.equal(citationText({ type: 'book', first: 'Walter', last: 'Isaacson', title: 'The Innovators', publisher: 'Simon & Schuster', date: '2014' }),
-    'Isaacson, Walter. The Innovators. Simon & Schuster, 2014.');
-  assert.ok(sourceMissing({ type: 'web', title: 'x' }).length > 0);
-  assert.deepEqual(sourceMissing({ type: 'web', title: 'x', container: 'y', url: 'https://a.org/b', check: { who: 'expert', when: 'yes', why: 'teach' } }), []);
+test('every computer from history has a kid-friendly website and a Wikipedia page', () => {
+  assert.ok(HISTORY.length >= 10);
+  for (const c of HISTORY) {
+    assert.equal(c.links.length, 2, c.id);
+    assert.ok(c.links[0].kids && c.links[0].url.startsWith('https://kids.kiddle.co/'), `${c.id}: Kiddle first`);
+    assert.ok(c.links[1].url.startsWith('https://en.wikipedia.org/wiki/'), `${c.id}: then Wikipedia`);
+  }
 });
+
+test('sentence frames fill in the chosen computer and need every blank', () => {
+  const l5 = LESSONS.find((l) => l.id === 'l5');
+  const facts = stepsFor(l5, 'history').find((s) => s.id === 'facts').activity;
+  const ctx = { answers: { pick: { pick: 'eniac' } } };
+  const half = { blanks: { 'who-0': 'J. Presper Eckert and John Mauchly' } };
+  assert.equal(isDone(facts, half, ctx), false);
+  const lines = summaryOf(facts, half, ctx);
+  assert.ok(lines[0].startsWith('The ENIAC was made by [J. Presper Eckert and John Mauchly] in [____]'), lines[0]);
+});
+
 
 test('report links must be https links on the allowed sites', () => {
   assert.equal(cleanLink_('https://docs.google.com/document/d/abc/edit'), 'https://docs.google.com/document/d/abc/edit');

@@ -12,11 +12,15 @@ It is a sibling of Pixel Trail, with the same structure and feel. It runs on Goo
 | 2. Inside the computer | 35 min | Why is a computer built from separate parts instead of one big part? | Open a case, meet seven parts (with 3D models), label them, build a computer in an empty case, match cables to ports, fix a black screen |
 | 3. How the parts work together | 35 min | Why does a computer need both memory and storage, when both hold information? | Follow a key press, put "opening a game" in order, match parts to jobs in a kitchen, the power-off test, a speed lab |
 | 4. Bits and bytes | 40 min | Why do computers only need two states to store anything? | Flip switches, count in binary, make a byte, decode a secret message, draw from bits, mix colors from numbers, order files by size |
-| 5. Final project | 3 class periods | Why do computers come in so many shapes and sizes? | **Design a computer** for a purpose on a $2,500 budget and explain every part, or **write a history report** in Google Docs, Slides, Canva, or a video, with 3 sources in MLA |
+| 5. Final project | 40 min | Why do computers come in so many shapes and sizes? | **Design a computer** from real parts at real prices on a $3,000 budget and explain every part, or **learn about a computer from history**: read two checked websites, fill in sentence frames, and compare it with a Chromebook |
 
 Each lesson is a walkthrough: one step on screen at a time, with one short instruction (26 words at most), the explanation folded under **Why?**, and a read-aloud button. Short check questions sit between steps and must be answered to move on; you see whether each was right on the first try. Each lesson ends with the big question, a short reflection, and optional stretch goals, then the student submits and keeps going. They never wait for you to approve.
 
-The app remembers the step each student reached, so they pick up where they left off. Lesson 5 shows a "Day 1, Day 2, Day 3" marker on its steps.
+The app remembers the step each student reached, so they pick up where they left off.
+
+**Design a computer** uses real parts, such as an AMD Ryzen 7 9800X3D or an NVIDIA RTX 5070, with prices checked in November 2026. That month a memory shortage had pushed RAM and graphics card prices far above normal, which makes the trade-offs real. Where no current price could be found (motherboards, power supplies, cases, monitors, and accessories), the app shows a typical recent price marked with ~. Prices live in `js/curriculum/catalog.js` if you want to update them. The app also checks real rules, like an Intel CPU needing an Intel motherboard.
+
+**Computer from history** links each computer to a page on Kiddle, a kid-safe encyclopedia, and to Wikipedia for more detail. Every link was checked in November 2026.
 
 ## Putting it on Apps Script
 
@@ -48,6 +52,7 @@ Students' Chromebooks need to reach:
 - `script.google.com` and `*.googleusercontent.com`: the app itself.
 - `fonts.googleapis.com` and `fonts.gstatic.com`: fonts. If these are blocked, the app uses standard fonts.
 - `sketchfab.com`, `static.sketchfab.com`, and `media.sketchfab.com`: the 3D models. If these are blocked, the "See it in 3D" box shows a note, and every lesson still works.
+- `kids.kiddle.co` and `en.wikipedia.org`: the websites in the history project.
 
 Your Workspace admin may also need to allow the Google Classroom API for Apps Script.
 
@@ -65,7 +70,7 @@ Only the teacher who deployed the app can use Classroom from it, because it runs
 
 ## Reviewing work
 
-Submitted work appears under **Waiting for review** on the class's **Progress** tab. The review page shows each step with what the student did, whether each check question was right on the first try, the reflection, and the stretch goals they ticked. For the design project, it shows their parts list and total. For the history report, it shows their sources and a button to open their report.
+Submitted work appears under **Waiting for review** on the class's **Progress** tab. The review page shows each step with what the student did, whether each check question was right on the first try, the reflection, and the stretch goals they ticked. For the design project, it shows their parts list and total. For the history project, it shows the sentences they filled in and which websites they opened.
 
 Score the three-row rubric (1 to 4 each), write feedback, and **Approve** or **Send back for changes**. Scores and feedback are visible only to you and that student. Approved work is locked; **Reopen** unlocks it. Students keep moving either way.
 
@@ -115,9 +120,7 @@ Each lesson lists its Massachusetts Grades 6-8 Digital Literacy and Computer Sci
 | 6-8.CT.c.1 | Lesson 4 | Demonstrate that numbers can be represented in different base systems (e.g., binary, octal, and hexadecimal) and text can be represented in different ways [e.g., American Standard Code for Information Interchange (ASCII)]. |
 | 6-8.CT.c.2 | Lessons 3, 4 | Describe how computers store, manipulate, and transfer data types and files (e.g., integers, real numbers, Boolean Operators) in a binary system. |
 | 6-8.DTC.a.2 | Lesson 4 | Identify the kinds of content associated with different file types and why different file types exist (e.g., formats for word processing, images, music, three-dimensional drawings.). |
-| 6-8.DTC.c.2 | Lesson 5 (history) | Evaluate quality of digital sources for reliability, including currency, relevancy, authority, accuracy, and purpose of digital information. |
 | 6-8.DTC.c.3 | Lesson 5 (history) | Gather, organize, and analyze information from digital sources by quoting, paraphrasing, and/or summarizing. |
-| 6-8.DTC.c.5 | Lesson 5 (history) | Use digital citation tools to cite sources using a school- or district-adopted format [e.g., Modern Language Association (MLA)], including proper citation for all text and non-text sources (e.g., images, audio, video). |
 
 ## 3D models
 
@@ -128,8 +131,7 @@ Twenty models from Sketchfab illustrate parts and historic computers, each shown
 - Students sign in with their school Google account. Anyone not on a class list sees a "not on a class list" page and no data.
 - Everything stays in your school's Google account. The only outside service is Sketchfab, and only when a student opens a 3D model.
 - The server decides who may do what from Google's sign-in, never from anything the browser claims. Students can reach only their own work and what their class may see.
-- Grades, feedback, reflections, answers, and report links are visible only to that student and you. Classmates see names, characters, ranks, badges, and which step someone is on. They never see emails.
-- Report links must be on Google Docs, Drive, Sites, Canva, YouTube, WeVideo, or Screencastify. To allow another site, add it to `js/shared/links.js` and rebuild.
+- Grades, feedback, reflections, and answers are visible only to that student and you. Classmates see names, characters, ranks, badges, and which step someone is on. They never see emails.
 - **Keep the Sheet private.** It holds every student's work and grades. Students never need access to it.
 
 ## Running it on your computer

@@ -6,11 +6,9 @@
 // also works on touchscreens and with a keyboard.
 import { h, svg, clear, fill, md, toast } from '../ui.js';
 import { readButton } from '../settings.js';
-import { stateOf, isDone, words, bitsValue, toBits, LETTERS, SPEED, SPEED_START, loadSeconds, designPicks, allSources, FORMATS } from './logic.js';
+import { stateOf, isDone, words, bitsValue, toBits, LETTERS, SPEED, SPEED_START, loadSeconds, designPicks, computerName, linksFor, framePieces } from './logic.js';
 import { casePicture, machinePicture, portIcon } from './pictures.js';
-import { CATEGORIES, BUDGET, buildTotal, buildProblems, missingParts, optionById, PURPOSES, TODAY } from '../curriculum/catalog.js';
-import { SOURCE_TYPES, citationParts, citationText, sourceMissing } from '../curriculum/mla.js';
-import { cleanLink_ } from '../shared/links.js';
+import { CATEGORIES, BUDGET, PRICES_CHECKED, buildTotal, buildProblems, missingParts, optionById, PURPOSES, TODAY } from '../curriculum/catalog.js';
 import { modelButton } from '../views/model3d.js';
 
 /** A stable shuffle, so cards stay put between visits but don't start in the answer order. */
@@ -444,29 +442,6 @@ function chooseActivity(spec, st, env) {
   return root;
 }
 
-function pickManyActivity(spec, st, env) {
-  const root = h('div.act.act-pickmany');
-  const note = h('p.how');
-  const purpose = PURPOSES.find((p) => p.id === env.ctx.answers?.purpose?.pick);
-  function draw() {
-    note.textContent = `Pick ${spec.min} or ${spec.max}. ${st.picks.length} picked.`;
-    fill(root, 
-      purpose && purpose.needs.length > 0 && h('p.small.muted', `Hint: a ${purpose.label.toLowerCase()} usually needs ${purpose.needs.map((n) => spec.options.find((o) => o.id === n)?.label.toLowerCase()).filter(Boolean).join(' and ')}.`),
-      h('div.choices.small-choices', spec.options.map((o) => h('button.choice', {
-        type: 'button', role: 'checkbox', 'aria-checked': st.picks.includes(o.id) ? 'true' : 'false', disabled: env.readOnly,
-        onclick: () => {
-          if (st.picks.includes(o.id)) st.picks = st.picks.filter((x) => x !== o.id);
-          else if (st.picks.length >= spec.max) { toast(`Pick at most ${spec.max}. Untick one first.`); return; } else st.picks.push(o.id);
-          draw(); env.onChange(st);
-        },
-      }, h('strong', o.label)))),
-      note,
-      wordBox({ label: spec.ask.label, value: st.text, minWords: spec.ask.minWords, readOnly: env.readOnly, onInput: (v) => { st.text = v; env.onChange(st); } }));
-  }
-  draw();
-  return root;
-}
-
 const money = (n) => `$${Number(n).toLocaleString('en-US')}`;
 
 /** The running total for a design, shown at the top of every parts step. */
@@ -475,7 +450,8 @@ function budgetBar(picks) {
   const over = total > BUDGET;
   return h('div.budget', { class: over ? 'over' : '' },
     h('div.row.between', h('strong', `Total so far: ${money(total)}`), h('span', over ? `${money(total - BUDGET)} over budget` : `${money(BUDGET - total)} left of ${money(BUDGET)}`)),
-    h('div.xpbar', h('div.xpfill', { style: `width:${Math.min(100, Math.round((total / BUDGET) * 100))}%` })));
+    h('div.xpbar', h('div.xpfill', { style: `width:${Math.min(100, Math.round((total / BUDGET) * 100))}%` })),
+    h('p.small.muted', `Real parts. Prices checked in ${PRICES_CHECKED}; real prices change every day. A ~ means a typical price.`));
 }
 
 function partsActivity(spec, st, env) {
@@ -499,7 +475,7 @@ function partsActivity(spec, st, env) {
           st.picks[id] = [...cur];
         } else st.picks[id] = o.id;
         drawList(); drawTop(); env.onChange(st);
-      } }, h('span.part-name', o.label), h('span.part-price', money(o.price)), h('span.small', o.spec), h('span.small.muted', o.note));
+      } }, h('span.part-name', o.label), h('span.part-price', `${o.estimate ? '~' : ''}${money(o.price)}`), h('span.small', o.spec), h('span.small.muted', o.note));
     }));
     drawList();
     return h('section.part-cat', h('div.row.between', h('h3', `${c.emoji} ${c.label}`), c.model && modelButton(c.model)),
@@ -564,152 +540,50 @@ function writeActivity(spec, st, env) {
   return root;
 }
 
-// Research ---------------------------------------------------------------------------------------
-
-const TRUST = {
-  who: { label: 'Who made it?', options: [['expert', 'An expert, museum, library, or school'], ['company', 'A company selling something'], ['unknown', "I can't tell"]] },
-  when: { label: 'Does it have a date, and agree with other sources?', options: [['yes', 'Yes'], ['unsure', 'Not sure']] },
-  why: { label: 'Why does it exist?', options: [['teach', 'To teach'], ['sell', 'To sell something'], ['entertain', 'To entertain']] },
-};
-
-function citationEl(src) {
-  return h('p.citation', citationParts(src).map((p) => (p.italic ? h('em', p.text) : p.text)));
-}
-
-function sourcesActivity(spec, st, env) {
-  const root = h('div.act.act-sources');
-  while (st.list.length < spec.count) st.list.push({ type: 'web' });
-  st.list.forEach((src, i) => {
-    const preview = h('div.cite-preview');
-    const need = h('p.small.warn');
-    const refresh = () => {
-      fill(preview, h('span.small.muted', 'Your citation: '), citationText(src) ? citationEl(src) : h('span.muted', 'Fill in the boxes to build it.'));
-      const miss = sourceMissing(src);
-      need.textContent = miss.length ? `Still needed: ${miss.join(', ')}.` : '';
-      need.className = miss.length ? 'small warn' : 'small ok';
-      if (!miss.length) need.textContent = '✓ This source is complete.';
-      const doubt = src.check && (src.check.who === 'company' || src.check.who === 'unknown' || src.check.why === 'sell');
-      if (doubt) need.textContent += ' This might not be a trustworthy source. Can you find a better one?';
-    };
-    const set = (k, v) => { src[k] = v; refresh(); env.onChange(st); };
-    const field = (k, label, opts = {}) => h('label.field.small', h('span', label), h('input', { value: src[k] || '', readOnly: env.readOnly, ...opts, oninput: (e) => set(k, e.target.value) }));
-    const fields = h('div.source-fields');
-    const drawFields = () => {
-      const book = src.type === 'book';
-      fill(fields, 
-        h('div.row', field('first', "Author's first name", { placeholder: 'Leave blank if none' }), field('last', "Author's last name")),
-        field('title', book ? 'Book title' : src.type === 'video' ? 'Video title' : 'Page or article title'),
-        !book && field('container', src.type === 'video' ? 'Website (like YouTube)' : 'Website name', { placeholder: src.type === 'video' ? 'YouTube' : 'Computer History Museum' }),
-        field('publisher', book ? 'Publisher' : src.type === 'video' ? 'Channel that posted it' : 'Publisher (if different from the website)'),
-        h('div.row', field('date', book ? 'Year published' : 'Date published (if it shows one)', { placeholder: book ? '2019' : 'March 5, 2024' }), !book && field('accessed', 'Date you looked at it', { type: 'date' })),
-        !book && field('url', 'Web address', { type: 'url', placeholder: 'https://' }));
-    };
-    drawFields();
-    root.append(h('section.source-card.card',
-      h('h3', `Source ${spec.first + i + 1}`),
-      h('div.row', SOURCE_TYPES.map((t) => h('label.check', h('input', { type: 'radio', name: `${env.stepId}-type-${i}`, checked: (src.type || 'web') === t.id, disabled: env.readOnly, onchange: () => { set('type', t.id); drawFields(); } }), h('span', t.label)))),
-      fields,
-      h('fieldset.trust', h('legend', 'Can you trust it?'), Object.entries(TRUST).map(([k, q]) => h('label.field.small', h('span', q.label),
-        h('select', { disabled: env.readOnly, onchange: (e) => { src.check = { ...(src.check || {}), [k]: e.target.value }; refresh(); env.onChange(st); } },
-          h('option', { value: '' }, 'Choose'), q.options.map(([v, label]) => h('option', { value: v, selected: src.check?.[k] === v }, label)))))),
-      preview, need));
-    refresh();
-  });
-  return root;
-}
-
-function compareActivity(spec, st, env) {
-  const name = env.ctx.answers?.pick?.pick;
-  return h('div.act.act-compare', h('div.table-wrap', h('table.board.compare',
-    h('thead', h('tr', h('th', ''), h('th', 'Your computer, then'), h('th', TODAY.label))),
-    h('tbody', TODAY.rows.map((r) => h('tr', h('th', { scope: 'row' }, r.label),
-      h('td', h('input', { value: st.then[r.id] || '', readOnly: env.readOnly, 'aria-label': `${r.label} for ${name || 'your computer'}`, oninput: (e) => { st.then[r.id] = e.target.value; env.onChange(st); } })),
-      h('td.muted', r.now)))))));
-}
-
-const START_LINKS = { docs: 'https://docs.google.com/document/create', slides: 'https://docs.google.com/presentation/create', canva: 'https://www.canva.com/' };
-
-function checklistActivity(spec, st, env) {
-  // The "Finish it" step shares its list with "Make your report".
-  const own = spec.continues ? env.shared(spec.continues) : st;
-  const save = () => (spec.continues ? env.saveShared(spec.continues, own) : env.onChange(own));
-  if (!own.checked) own.checked = [];
-  const root = h('div.act.act-checklist');
+function linksActivity(spec, st, env) {
+  const root = h('div.act.act-links');
+  const links = linksFor(env.ctx);
   function draw() {
-    fill(root, 
-      h('h3', 'Format'),
-      h('div.choices.small-choices', FORMATS.map((f) => h('button.choice', { type: 'button', role: 'radio', 'aria-checked': own.format === f.id ? 'true' : 'false', disabled: env.readOnly, onclick: () => { own.format = f.id; draw(); save(); } }, h('span.choice-emoji', f.emoji), h('strong', f.label)))),
-      own.format && START_LINKS[own.format] && h('p', h('a.btn.small', { href: START_LINKS[own.format], target: '_blank', rel: 'noopener noreferrer' }, `Start a new ${FORMATS.find((f) => f.id === own.format).label} ↗`)),
-      own.format === 'video' && h('p.small', 'Record with a tool your school uses, like Screencastify or WeVideo, and save it to Google Drive or YouTube. Show a slide for each part.'),
-      h('h3', 'Your report has...'),
-      h('div.stack.tight', spec.items.map((item, i) => h('label.check', h('input', { type: 'checkbox', checked: own.checked.includes(i), disabled: env.readOnly, onchange: (e) => {
-        own.checked = e.target.checked ? [...new Set([...own.checked, i])] : own.checked.filter((x) => x !== i);
-        save();
-        draw();
-      } }), h('span', item)))),
-      h('p.act-progress.small', `${own.checked.length} of ${spec.items.length} parts done`));
+    fill(root,
+      !links.length && h('p.warn', 'Go back and pick a computer first.'),
+      h('div.cards.link-cards', links.map((l) => h('a.learn-card.link-card', {
+        href: l.url, target: '_blank', rel: 'noopener noreferrer', class: st.opened.includes(l.url) ? 'open' : '',
+        onclick: () => { if (!st.opened.includes(l.url)) { st.opened.push(l.url); env.onChange(st); draw(); } },
+      }, h('span.learn-emoji', { 'aria-hidden': 'true' }, l.kids ? '📗' : '📚'), h('strong', l.label), h('span.small', l.kids ? 'Written for kids. Start here.' : 'More detail, harder reading.'),
+        h('span.btn.small', st.opened.includes(l.url) ? '✓ Opened. Open again ↗' : 'Open ↗')))),
+      h('div.look-for', h('h3', 'Look for:'), h('ul', h('li', 'Who made it, and when'), h('li', 'What people used it for'), h('li', 'How big it was'), h('li', 'Its input, processing, storage, and output'))),
+      h('p.small.muted', 'The website opens in a new tab. Come back to this tab to fill in what you found.'));
   }
   draw();
   return root;
 }
 
-function citationsActivity(spec, st, env) {
-  const all = allSources(env.ctx.answers);
-  const complete = all.filter((s) => !sourceMissing(s).length).sort((a, b) => citationText(a).localeCompare(citationText(b)));
-  const text = complete.map(citationText).join('\n\n');
-  const copyBox = h('textarea.visually-hidden', { value: text, 'aria-hidden': 'true', tabindex: '-1' });
-  return h('div.act.act-citations',
-    h('div.works-cited', h('h3', 'Works Cited'), complete.length ? complete.map(citationEl) : h('p.muted', 'No complete sources yet.')),
-    complete.length < 3 && h('p.warn', `You have ${complete.length} complete source${complete.length === 1 ? '' : 's'}. Go back and finish all three.`),
-    complete.length > 0 && h('div.row', h('button.btn', { type: 'button', onclick: async () => {
-      try { await navigator.clipboard.writeText(text); toast('Copied! Paste it into your report.'); } catch (_) {
-        copyBox.classList.remove('visually-hidden'); copyBox.select();
-        try { document.execCommand('copy'); toast('Copied! Paste it into your report.'); } catch (_e) { toast('Select the text and copy it yourself.'); }
-      }
-    } }, '📋 Copy all')),
-    copyBox,
-    h('p.small.muted', 'After pasting, make the website and book titles italic, like they are here. Give each citation a hanging indent if your teacher asks.'),
-    h('label.check', h('input', { type: 'checkbox', checked: !!st.added, disabled: env.readOnly, onchange: (e) => { st.added = e.target.checked; env.onChange(st); } }), h('span', 'I put these on the Works Cited page of my report.')));
+function framesActivity(spec, st, env) {
+  const name = computerName(env.ctx);
+  return h('div.act.act-frames', spec.frames.map((f) => h('p.frame', framePieces(f, name).map((piece) => (piece.key
+    ? h('input.blank', { value: st.blanks[piece.key] || '', placeholder: piece.hint, 'aria-label': piece.hint, readOnly: env.readOnly, size: Math.max(12, piece.hint.length),
+      oninput: (e) => { st.blanks[piece.key] = e.target.value; env.onChange(st); } })
+    : piece.text)))));
 }
 
-function linkActivity(spec, st, env) {
-  const root = h('div.act.act-link');
-  const fmt = env.shared('make')?.format;
-  const status = h('p.small');
-  const test = h('a.btn.small', { target: '_blank', rel: 'noopener noreferrer' }, 'Open my link to test it ↗');
-  const refresh = () => {
-    const ok = cleanLink_(st.url);
-    status.textContent = !st.url ? '' : ok ? '✓ That link works here.' : 'Paste a link from Google Docs, Slides, Drive, Canva, YouTube, WeVideo, or Screencastify. It starts with https://';
-    status.className = ok ? 'small ok' : 'small warn';
-    test.style.display = ok ? '' : 'none';
-    if (ok) test.href = ok;
-  };
-  const how = {
-    docs: 'In your document, press Share. Under "General access," choose your school, or add your teacher\'s email. Then press "Copy link."',
-    slides: 'In your slides, press Share. Under "General access," choose your school, or add your teacher\'s email. Then press "Copy link."',
-    canva: 'In Canva, press Share, then "Collaboration link." Set it so anyone with the link can view, then copy it.',
-    video: 'Find your video in Drive or on YouTube. Set sharing so your teacher can view it, then copy the link.',
-  };
-  fill(root, 
-    h('p', how[fmt] || 'In your report, press Share. Set it so your teacher can view it. Then copy the link.'),
-    h('label.field', h('span', 'Link to your report'), h('input', { type: 'url', value: st.url || '', readOnly: env.readOnly, placeholder: 'https://docs.google.com/...', oninput: (e) => { st.url = e.target.value.trim(); refresh(); env.onChange(st); } })),
-    status, test,
-    h('label.check', h('input', { type: 'checkbox', checked: !!st.shared, disabled: env.readOnly, onchange: (e) => { st.shared = e.target.checked; env.onChange(st); } }), h('span', 'I set the sharing so my teacher can open it.')));
-  refresh();
-  return root;
+function compareActivity(spec, st, env) {
+  const name = computerName(env.ctx);
+  return h('div.act.act-compare', h('div.table-wrap', h('table.board.compare',
+    h('thead', h('tr', h('th', ''), h('th', `The ${name}, then`), h('th', TODAY.label))),
+    h('tbody', TODAY.rows.map((r) => h('tr', h('th', { scope: 'row' }, r.label),
+      h('td', h('input', { value: st.then[r.id] || '', readOnly: env.readOnly, 'aria-label': `${r.label} for ${name || 'your computer'}`, oninput: (e) => { st.then[r.id] = e.target.value; env.onChange(st); } })),
+      h('td.muted', r.now)))))));
 }
 
 const RENDER = {
   sort: sortActivity, explore: exploreActivity, order: orderActivity, judge: judgeActivity, binary: binaryActivity, decode: decodeActivity,
-  pixels: pixelsActivity, color: colorActivity, speedlab: speedActivity, choose: chooseActivity, pickmany: pickManyActivity, parts: partsActivity,
-  budget: budgetActivity, assemble: assembleActivity, write: writeActivity, sources: sourcesActivity, compare: compareActivity,
-  checklist: checklistActivity, citations: citationsActivity, link: linkActivity,
+  pixels: pixelsActivity, color: colorActivity, speedlab: speedActivity, choose: chooseActivity, parts: partsActivity,
+  budget: budgetActivity, assemble: assembleActivity, write: writeActivity, links: linksActivity, frames: framesActivity, compare: compareActivity,
 };
 
 /**
  * Draw one activity.
- * env: { stepId, ctx: { answers }, readOnly, onChange(state), onTrack?(track) -> bool,
- *        shared(stepId) -> another step's state, saveShared(stepId, state) }
+ * env: { stepId, ctx: { answers }, readOnly, onChange(state), onTrack?(track) -> bool }
  */
 export function renderActivity(spec, saved, env) {
   const draw = RENDER[spec.type];
@@ -717,4 +591,4 @@ export function renderActivity(spec, saved, env) {
   return draw(spec, stateOf(spec, saved), env);
 }
 
-export { specSheet, citationEl, budgetBar };
+export { specSheet, budgetBar };

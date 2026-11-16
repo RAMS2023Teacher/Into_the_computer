@@ -16,7 +16,7 @@ Use your school account on a school Chromebook, the same kind students use.
 - [ ] As the teacher, review it: score the rubric, write feedback, and approve. Check that the student sees the score and feedback on their home page, and that a classmate's **My class** page shows no score.
 - [ ] On the class's **Google Classroom** tab, create the five assignments as **drafts** in a test course. Post one in Classroom, then press **Send grades** and check the grade appears in the Classroom gradebook. Press **Return** there.
 - [ ] Press **Project this class** and check it fills a projector screen.
-- [ ] Try lesson 5's history report as the test student: make a Google Doc, set sharing so you can view it, paste the link, and open it from the review page.
+- [ ] Try lesson 5's history project as the test student. Check that the Kiddle and Wikipedia links open on a student Chromebook; school filters sometimes block one of them.
 
 ## 2. A small group (one class period, 3 to 5 students)
 

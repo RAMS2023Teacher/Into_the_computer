@@ -6,10 +6,7 @@ import { getLesson, stepsFor, checksFor, rubricFor, stretchFor } from '../curric
 import { alignmentFor, standardByCode } from '../curriculum/alignment.js';
 import { shortCode } from '../curriculum/standards.js';
 import { isDone, summaryOf } from '../activities/logic.js';
-import { specSheet, citationEl } from '../activities/ui.js';
-import { allSources } from '../activities/logic.js';
-import { sourceMissing } from '../curriculum/mla.js';
-import { cleanLink_ } from '../shared/links.js';
+import { specSheet } from '../activities/ui.js';
 
 export function standardsBlock(lessonId, track) {
   const a = alignmentFor(lessonId, track);
@@ -59,8 +56,6 @@ export async function viewReview(main, workId) {
     if (ok) { toast(status === 'approved' ? 'Approved.' : 'Sent back with your feedback. The student can keep going.'); location.hash = nextHref; }
   };
 
-  const link = cleanLink_(w.link);
-  const sources = allSources(answers);
   const stepList = h('ol.review-steps', steps.map((s) => {
     const ok = isDone(s.activity, answers[s.id], ctx);
     const own = checks.map((c, i) => ({ c, key: `${c.after}-${i}` })).filter((x) => x.c.after === s.id);
@@ -82,9 +77,7 @@ export async function viewReview(main, workId) {
           h('span.tag', `${w.done_count} of ${w.done_total} activities done`),
           h('span.tag', w.quiz_total ? `Checks right on the first try: ${w.quiz_right} of ${w.quiz_total}` : 'Checks not all answered'),
           h('span.tag', `Stretch goals: ${w.stretch_done} of ${stretch.length}`)),
-        link && h('section.card.stack', h('h2', 'Report'), h('p', h('a.btn.primary', { href: link, target: '_blank', rel: 'noopener noreferrer' }, 'Open the report ↗')), h('p.small.mono', link)),
         w.track === 'design' && h('section.card.stack', h('h2', 'The design'), specSheet(answers)),
-        w.track === 'history' && sources.length > 0 && h('section.card.stack', h('h2', 'Sources'), sources.map((s) => h('div', citationEl(s), sourceMissing(s).length > 0 && h('p.small.warn', `Needs ${sourceMissing(s).join(', ')}`)))),
         h('section.card.stack', h('h2', 'Step by step'), stepList),
         h('section.card.stack', h('h2', 'Reflection'), md(lesson.reflect), w.reflection ? h('blockquote', w.reflection) : h('p.muted', 'No reflection written.')),
         stretch.length > 0 && h('section.card.stack', h('h2', 'Stretch goals'), h('p.small.muted', 'Students tick the ones they finished. Look for the work in their answers or ask them.'), h('ol.small', stretch.map((g, i) => h('li', { class: i < w.stretch_done ? 'ok' : 'muted' }, g)))),

@@ -4,9 +4,7 @@
 //
 // Each activity's state is saved as plain JSON in the student's work, keyed by step id.
 // ctx = { answers } holds every step's state in the lesson, for activities that build on earlier ones.
-import { CATEGORIES, BUDGET, buildTotal, buildProblems, missingParts, optionById, TODAY } from '../curriculum/catalog.js';
-import { sourceMissing, citationText } from '../curriculum/mla.js';
-import { cleanLink_ } from '../shared/links.js';
+import { CATEGORIES, BUDGET, buildTotal, buildProblems, missingParts, optionById, TODAY, historyById } from '../curriculum/catalog.js';
 
 export const words = (t) => (String(t || '').match(/[A-Za-z0-9'’$,.-]+/g) || []).filter((w) => /[A-Za-z0-9]/.test(w)).length;
 const enough = (t, n) => words(t) >= (n || 1);
@@ -39,11 +37,29 @@ export function designPicks(answers) {
   }
   return out;
 }
-/** Every source a history report has, in the order entered. */
-export function allSources(answers) {
-  return Object.entries(asObj(answers)).filter(([, st]) => st && Array.isArray(st.list)).flatMap(([, st]) => st.list).filter(Boolean);
+/** The computer a history student picked, and its websites. */
+export const computerName = (ctx) => (historyById(asObj(asObj(ctx && ctx.answers).pick).pick) || {}).name || 'computer';
+export const linksFor = (ctx) => (historyById(asObj(asObj(ctx && ctx.answers).pick).pick) || { links: [] }).links;
+
+// Sentence frames: "The {name} was made by [who made it] in [the year]." Each [blank] is a box.
+const BLANK = /\[([^\]]+)\]/g;
+/** The keys of every blank in a frames activity, like "who-0" and "who-1". */
+export const blanksOf = (spec) => spec.frames.flatMap((f) => [...f.text.matchAll(BLANK)].map((_, i) => `${f.id}-${i}`));
+/** The frame split into text and blanks, for drawing: [{ text } or { key, hint }]. */
+export function framePieces(frame, name) {
+  const text = frame.text.replace('{name}', name);
+  const out = [];
+  let last = 0;
+  let i = 0;
+  for (const m of text.matchAll(BLANK)) {
+    out.push({ text: text.slice(last, m.index) });
+    out.push({ key: `${frame.id}-${i++}`, hint: m[1] });
+    last = m.index + m[0].length;
+  }
+  out.push({ text: text.slice(last) });
+  return out;
 }
-const completeSources = (answers) => allSources(answers).filter((s) => !sourceMissing(s).length);
+const fillFrame = (frame, blanks, name) => framePieces(frame, name).map((p) => (p.key ? `[${String(blanks[p.key] || '').trim() || '____'}]` : p.text)).join('');
 
 const binsOf = (spec) => asList(spec.bins);
 const T = {
@@ -144,15 +160,6 @@ const T = {
       return [`Chose: ${st.pick === 'other' ? `their own: ${st.text || ''}` : o ? o.label : '(nothing yet)'}`, spec.ask && st.pick !== 'other' ? `${spec.ask.label} ${st.text || '(blank)'}` : ''].filter(Boolean);
     },
   },
-  pickmany: {
-    initial: () => ({ picks: [], text: '' }),
-    isDone: (spec, st) => {
-      const n = asList(st.picks).filter((id) => spec.options.some((o) => o.id === id)).length;
-      return n >= spec.min && n <= spec.max && (!spec.ask || enough(st.text, spec.ask.minWords));
-    },
-    solve: (spec) => ({ picks: spec.options.slice(0, spec.min).map((o) => o.id), text: 'These matter most because the computer has to do its main job well.' }),
-    summary: (spec, st) => [`Picked: ${spec.options.filter((o) => asList(st.picks).includes(o.id)).map((o) => o.label).join(', ') || '(nothing yet)'}`, spec.ask ? `${spec.ask.label} ${st.text || '(blank)'}` : ''].filter(Boolean),
-  },
   parts: {
     initial: () => ({ picks: {}, why: {} }),
     isDone: (spec, st) => spec.categories.every((id) => {
@@ -162,7 +169,7 @@ const T = {
       return picked && enough(asObj(st.why)[id], spec.minWords);
     }),
     solve: (spec) => {
-      const firstOk = { cpu: 'cpu-fast', ram: 'ram-16', storage: 'ssd-1', graphics: 'gpu-mid', board: 'board-basic', power: 'psu-550', case: 'case-tower', screen: 'screen-big' };
+      const firstOk = { cpu: 'r5-9600x', ram: 'ram-16', storage: 'ssd-1', graphics: 'rtx-5060', board: 'b650', power: 'rm650e', case: 'h5-flow', screen: 'monitor-27' };
       const picks = {};
       const why = {};
       for (const id of spec.categories) {
@@ -204,14 +211,21 @@ const T = {
     solve: (spec) => ({ text: Object.fromEntries(spec.prompts.map((p) => [p.id, Array(Math.ceil(p.minWords / 6)).fill('This is a sentence about my project.').join(' ')])) }),
     summary: (spec, st) => spec.prompts.map((p) => `${p.label} ${asObj(st.text)[p.id] || '(blank)'}`),
   },
-  sources: {
-    initial: (spec) => ({ list: Array.from({ length: spec.count }, () => ({ type: 'web' })) }),
-    isDone: (spec, st) => asList(st.list).length >= spec.count && asList(st.list).slice(0, spec.count).every((s) => !sourceMissing(s).length),
-    solve: (spec) => ({ list: Array.from({ length: spec.count }, (_, i) => ({
-      type: 'web', first: 'Ada', last: `Writer${spec.first + i + 1}`, title: `Early Computers, Part ${spec.first + i + 1}`, container: 'Computer History Museum',
-      date: '2024-03-05', url: `https://www.computerhistory.org/part${spec.first + i + 1}`, accessed: '2026-11-16', check: { who: 'expert', when: 'yes', why: 'teach' },
-    })) }),
-    summary: (spec, st) => asList(st.list).map((s, i) => `Source ${spec.first + i + 1}: ${citationText(s) || '(empty)'}${sourceMissing(s).length ? ` [needs ${sourceMissing(s).join(', ')}]` : ''}${s.check ? ` Trust check: made by ${s.check.who || '?'}, current: ${s.check.when || '?'}, purpose: ${s.check.why || '?'}` : ''}`),
+  links: {
+    initial: () => ({ opened: [] }),
+    isDone: (spec, st) => asList(st.opened).length >= spec.min,
+    solve: (spec, ctx) => ({ opened: linksFor(ctx).slice(0, spec.min).map((l) => l.url) }),
+    summary: (spec, st, ctx) => {
+      const opened = asList(st.opened);
+      const links = linksFor(ctx);
+      return [opened.length ? `Opened: ${links.filter((l) => opened.includes(l.url)).map((l) => l.label).join('; ') || opened.length}` : 'Has not opened a website yet'];
+    },
+  },
+  frames: {
+    initial: () => ({ blanks: {} }),
+    isDone: (spec, st) => blanksOf(spec).every((key) => enough(asObj(st.blanks)[key], 1)),
+    solve: (spec) => ({ blanks: Object.fromEntries(blanksOf(spec).map((key) => [key, 'not sure'])) }),
+    summary: (spec, st, ctx) => spec.frames.map((f) => fillFrame(f, asObj(st.blanks), computerName(ctx))),
   },
   compare: {
     initial: () => ({ then: {} }),
@@ -219,38 +233,7 @@ const T = {
     solve: () => ({ then: Object.fromEntries(TODAY.rows.map((r) => [r.id, 'It was very different then.'])) }),
     summary: (spec, st) => TODAY.rows.map((r) => `${r.label}: then "${asObj(st.then)[r.id] || ''}", now "${r.now}"`),
   },
-  checklist: {
-    initial: () => ({ format: '', checked: [] }),
-    isDone: (spec, st, ctx) => {
-      const own = spec.continues ? asObj(asObj(ctx && ctx.answers)[spec.continues]) : st;
-      return !!own.format && spec.items.every((_, i) => asList(own.checked).includes(i));
-    },
-    solve: (spec) => (spec.continues ? {} : { format: 'docs', checked: spec.items.map((_, i) => i) }),
-    summary: (spec, st, ctx) => {
-      if (spec.continues) return ['Same checklist as "Make your report"'];
-      return [`Format: ${(FORMATS.find((f) => f.id === st.format) || {}).label || '(not chosen)'}`, `Parts done: ${asList(st.checked).length} of ${spec.items.length}`];
-    },
-  },
-  citations: {
-    initial: () => ({ added: false }),
-    isDone: (spec, st, ctx) => !!st.added && completeSources(ctx && ctx.answers).length >= 3,
-    solve: () => ({ added: true }),
-    summary: (spec, st, ctx) => [`${completeSources(ctx && ctx.answers).length} complete sources. ${st.added ? 'Says they added them to the report.' : 'Not added to the report yet.'}`],
-  },
-  link: {
-    initial: () => ({ url: '', shared: false }),
-    isDone: (spec, st) => !!cleanLink_(st.url) && !!st.shared,
-    solve: () => ({ url: 'https://docs.google.com/document/d/example/edit', shared: true }),
-    summary: (spec, st) => [cleanLink_(st.url) ? `Link: ${cleanLink_(st.url)}` : 'No link yet', st.shared ? 'Says sharing is set so the teacher can view it' : 'Has not confirmed sharing'],
-  },
 };
-
-export const FORMATS = [
-  { id: 'docs', label: 'Google Docs', emoji: '📄' },
-  { id: 'slides', label: 'Google Slides', emoji: '📊' },
-  { id: 'canva', label: 'Canva', emoji: '🎨' },
-  { id: 'video', label: 'Video', emoji: '🎥' },
-];
 
 export const TYPES = Object.keys(T);
 const kind = (spec) => {

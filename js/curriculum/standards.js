@@ -12,9 +12,7 @@ export const STANDARDS = [
   { code: '6-8.CT.c.1', strand: 'Computational Thinking', topic: 'Data', text: 'Demonstrate that numbers can be represented in different base systems (e.g., binary, octal, and hexadecimal) and text can be represented in different ways [e.g., American Standard Code for Information Interchange (ASCII)].' },
   { code: '6-8.CT.c.2', strand: 'Computational Thinking', topic: 'Data', text: 'Describe how computers store, manipulate, and transfer data types and files (e.g., integers, real numbers, Boolean Operators) in a binary system.' },
   { code: '6-8.DTC.a.2', strand: 'Digital Tools and Collaboration', topic: 'Digital Tools', text: 'Identify the kinds of content associated with different file types and why different file types exist (e.g., formats for word processing, images, music, three-dimensional drawings.).' },
-  { code: '6-8.DTC.c.2', strand: 'Digital Tools and Collaboration', topic: 'Research', text: 'Evaluate quality of digital sources for reliability, including currency, relevancy, authority, accuracy, and purpose of digital information.' },
   { code: '6-8.DTC.c.3', strand: 'Digital Tools and Collaboration', topic: 'Research', text: 'Gather, organize, and analyze information from digital sources by quoting, paraphrasing, and/or summarizing.' },
-  { code: '6-8.DTC.c.5', strand: 'Digital Tools and Collaboration', topic: 'Research', text: 'Use digital citation tools to cite sources using a school- or district-adopted format [e.g., Modern Language Association (MLA)], including proper citation for all text and non-text sources (e.g., images, audio, video).' },
 ];
 
 export const standardByCode = (code) => STANDARDS.find((s) => s.code === code);

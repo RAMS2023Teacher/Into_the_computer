@@ -12,7 +12,6 @@ import { loadMe, badgeChip } from './student.js';
 import { modelButton } from './model3d.js';
 import { statsFor, XP, canOpen, nextLessonFor } from '../game/rules.js';
 import { getSettings, readButton, speak, stopSpeaking } from '../settings.js';
-import { cleanLink_ } from '../shared/links.js';
 
 const CHECKS_KEY = '_checks'; // Where first-try results of check questions are kept in the answers.
 const checkKey = (c, i) => `${c.after}-${i}`;
@@ -75,7 +74,7 @@ export async function viewLesson(main, id, previewTrack) {
   };
   const patch = () => ({
     answers, track, step_at: furthest, stretch_done: stretchDone, reflection,
-    done_count: doneSteps(), done_total: steps.length, link: answers.share?.url || '', ...checkStats(),
+    done_count: doneSteps(), done_total: steps.length, ...checkStats(),
   });
   async function persist() {
     clearTimeout(timer);
@@ -168,8 +167,6 @@ export async function viewLesson(main, id, previewTrack) {
         setTrack(next);
         return true;
       },
-      shared: (stepId) => { if (!answers[stepId]) answers[stepId] = {}; return answers[stepId]; },
-      saveShared: (stepId, state) => { answers[stepId] = state; markDirty(); drawNav(); drawDots(); },
     };
     const models = [s.model, ...(s.models || [])].filter(Boolean).map((k) => modelButton(k)).filter(Boolean);
     const activity = renderActivity(s.activity, answers[s.id], env);
@@ -245,7 +242,6 @@ export async function viewLesson(main, id, previewTrack) {
       h('label.field.word-field', h('span', h('div.read-row', md(lesson.reflect), readButton(() => lesson.reflect))), area, counter),
       stretch.length > 0 && h('details.hint', { open: stretchDone > 0 }, h('summary', `Done early? Stretch goals (+${XP.stretch} XP each)`), h('p.small.muted', 'Tick the ones you finish. Your teacher can see them.'), h('div.stretches', boxes)),
       !preview && h('p', { class: done === total ? 'ok' : 'warn' }, done === total ? `✓ All ${total} activities done.` : `${done} of ${total} activities done.`),
-      lesson.tracks && track === 'history' && !cleanLink_(answers.share?.url) && h('p.warn', 'Your report link is missing. Add it in the "Share the link" step.'),
       !preview && !approved && h('button.btn.primary.big', { type: 'button', onclick: submit }, work && work.status !== 'in_progress' ? 'Submit again' : 'Submit lesson'),
       preview && h('p.muted', 'Students submit from here. Nothing is saved in a teacher preview.'),
       nav(false));

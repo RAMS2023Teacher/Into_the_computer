@@ -45,6 +45,7 @@ Plain ES modules with no framework. `tools/build.mjs` bundles `js/main.js` with 
 - Each table is a Sheet tab in `SCHEMA`. Cells hold plain text; `encText_` prefixes anything that could act as a formula. Once real data exists, a new `Works` field goes in `WORK_TAIL`, after the `dataN` columns. Never insert a column before existing ones.
 - A student's answers for a lesson are one JSON object in the `dataN` columns, keyed by step id, plus `_checks` for first-try results of check questions.
 - `classBoard_` is what classmates see. It must never include answers, reflections, links, grades, approval status, or emails.
+- The `link` column and `js/shared/links.js` (`cleanLink_`) are from an earlier version where history reports were handed in as links. The browser no longer sends a link; they stay so existing Sheets keep their columns.
 - Files in `js/shared/` run on both sides: the build strips `export` and appends them to `Code.gs`. They can't import anything, and their names end in `_`.
 
 `js/data/store.js` is the browser's side. Calls made at the same moment travel as one `batch` (each trip costs about a second), and read-only answers in `READS` are reused for 15 seconds; any other call clears that cache. Views should start all their calls together with `Promise.all`. A new server route must be added to `METHODS`; a test checks the two lists match. Students save at most every 30 seconds (`saveEvery`) while working, plus when they leave a lesson or submit, because a whole class shares one account's quota.
@@ -53,11 +54,11 @@ Plain ES modules with no framework. `tools/build.mjs` bundles `js/main.js` with 
 
 ### Lessons are data
 
-`js/curriculum/lessons.js` holds the five lessons. Lesson 5 is the project: a `choose` step picks a track (`design` or `history`), each with its own steps, rubric, and stretch goals, and each step has a `day` (1 to 3). `stepsFor(lesson, track)` gives the steps a student sees.
+`js/curriculum/lessons.js` holds the five lessons. Lesson 5 is the project, one class period: a `choose` step picks a track (`design` or `history`), each with its own steps, rubric, and stretch goals. Design parts and prices are in `js/curriculum/catalog.js` (`estimate: true` marks a typical price where no current one was found); history computers each have a Kiddle and a Wikipedia link. `stepsFor(lesson, track)` gives the steps a student sees.
 
 Each step's `activity` has a `type`. `js/activities/logic.js` holds the rules for each type with no page code: `initial`, `isDone`, `solve`, and `summary` (what the teacher sees). `js/activities/ui.js` draws them. A new activity type needs all four rules and a renderer, and the tests will solve it and check that a fresh start isn't already done.
 
-The tests enforce: step minutes plus `finishMins` equal the lesson's minutes (and each project day equals one period), word limits, three choices per check question with right answers spread across positions, a three-row rubric scored 1 to 4, an alignment entry with standards that exist, and models that exist.
+The tests enforce: step minutes plus `finishMins` equal the lesson's minutes for every track, word limits, three choices per check question with right answers spread across positions, a three-row rubric scored 1 to 4, an alignment entry with standards that exist, and models that exist.
 
 ### 3D models
 
