@@ -284,6 +284,9 @@ function decodeActivity(spec, st, env) {
   const helper = { bits: Array(8).fill(0) };
   const ini = st.initial;
   let showTable = false;
+  let decoderOpen = false; // Redrawing must not close the decoder while a student is using it.
+  /** After a redraw, put focus back on the switch that was just flipped. */
+  const refocus = (where, i) => root.querySelectorAll(`${where} .switch`)[i]?.focus();
   const status = h('div.act-feedback', { 'aria-live': 'polite' });
   function check() {
     const typed = String(st.letters || '').toUpperCase();
@@ -309,8 +312,8 @@ function decodeActivity(spec, st, env) {
             if (e.target.value) e.target.closest('.secret-byte')?.nextElementSibling?.querySelector('input')?.focus();
           } })))),
       status,
-      h('details.hint.decoder', h('summary', 'Byte decoder: flip switches to turn bits into a number'),
-        switchRow(helper.bits, (i) => { helper.bits[i] = helper.bits[i] ? 0 : 1; draw(); }),
+      h('details.hint.decoder', { open: decoderOpen, ontoggle: (e) => { decoderOpen = e.currentTarget.open; } }, h('summary', 'Byte decoder: flip switches to turn bits into a number'),
+        switchRow(helper.bits, (i) => { helper.bits[i] = helper.bits[i] ? 0 : 1; draw(); refocus('.decoder', i); }),
         h('p.binary-sum', h('span.mono', helper.bits.join('')), ` = ${helperValue}`, helperValue >= 65 && helperValue <= 90 ? h('strong', ` = the letter ${String.fromCharCode(helperValue)}`) : '')),
       h('button.btn.small', { type: 'button', onclick: () => { showTable = !showTable; draw(); } }, showTable ? 'Hide the code table' : 'Show the code table'),
       showTable && h('div.code-table', LETTERS.map((l) => h('span', h('strong', l), ` ${l.charCodeAt(0)}`))),
@@ -319,7 +322,7 @@ function decodeActivity(spec, st, env) {
         h('label.field.small', h('span', 'My letter'), h('select', { disabled: env.readOnly, onchange: (e) => { ini.letter = e.target.value; draw(); env.onChange(st); } },
           h('option', { value: '' }, 'Choose'), LETTERS.map((l) => h('option', { value: l, selected: ini.letter === l }, l)))),
         ini.letter && h('p.small', `${ini.letter} is ${ini.letter.charCodeAt(0)}. Flip the switches to make ${ini.letter.charCodeAt(0)}.`),
-        ini.letter && switchRow(ini.bits, (i) => { if (env.readOnly) return; ini.bits[i] = ini.bits[i] ? 0 : 1; draw(); env.onChange(st); }, env.readOnly),
+        ini.letter && switchRow(ini.bits, (i) => { if (env.readOnly) return; ini.bits[i] = ini.bits[i] ? 0 : 1; draw(); refocus('.initial', i); env.onChange(st); }, env.readOnly),
         ini.letter && h('p.binary-sum', h('span.mono', ini.bits.join('')), ` = ${iniValue}`, iniValue === ini.letter.charCodeAt(0) ? h('strong.ok', ` ✓ That's ${ini.letter}!`) : '')),
     );
     check();
