@@ -48,19 +48,20 @@ export async function viewLesson(main, id, previewTrack) {
   const buildFlow = () => {
     steps = stepsFor(lesson, track);
     checks = checksFor(lesson, track);
-    flow = steps.flatMap((step, n) => [{ step, n }, ...checks.map((c, i) => ({ check: c, key: checkKey(c, i) })).filter((x) => x.check.after === step.id)]);
+    // A step's Learn screen comes first, then the step, then any check questions about it.
+    flow = steps.flatMap((step, n) => [...(step.learn ? [{ learn: step, n }] : []), { step, n }, ...checks.map((c, i) => ({ check: c, key: checkKey(c, i) })).filter((x) => x.check.after === step.id)]);
   };
   buildFlow();
   const ctx = { answers };
   const doneSteps = () => steps.filter((s) => isDone(s.activity, answers[s.id], ctx)).length;
   const stepNumberAt = (i) => {
     if (i >= flow.length) return steps.length;
-    for (let k = i; k >= 0; k--) if (flow[k].step) return flow[k].n;
+    for (let k = i; k >= 0; k--) if (flow[k].step || flow[k].learn) return flow[k].n;
     return 0;
   };
   // Open where the student left off.
   let furthest = Math.min(Number(work?.step_at) || 0, steps.length);
-  let at = furthest >= steps.length && steps.length > 1 ? flow.length : Math.max(0, flow.findIndex((x) => x.step && x.n === furthest));
+  let at = furthest >= steps.length && steps.length > 1 ? flow.length : Math.max(0, flow.findIndex((x) => (x.step || x.learn) && x.n === furthest));
 
   // Saving: at most every 30 seconds while working, and right away when leaving or submitting.
   const status = h('span.save-state', { 'aria-live': 'polite' }, preview ? 'Teacher preview: nothing is saved' : approved ? 'Approved: read only' : 'All saved');
@@ -117,6 +118,10 @@ export async function viewLesson(main, id, previewTrack) {
       }
       const on = i === at;
       const goTo = () => { at = i; drawStep(); };
+      if (item.learn) {
+        dots.append(h('li', h('button', { class: `learn ${on ? 'on' : ''}`, 'aria-label': `Learn: ${item.learn.title}`, 'aria-current': on ? 'step' : null, title: `Learn: ${item.learn.title}`, onclick: goTo, disabled: !reachable(i) }, '💡')));
+        return;
+      }
       if (item.check) {
         const ans = answers[CHECKS_KEY][item.key];
         dots.append(h('li', h('button', { class: `quiz ${ans !== undefined ? 'ok' : ''} ${on ? 'on' : ''}`, 'aria-label': 'Check question', 'aria-current': on ? 'step' : null, onclick: goTo, disabled: !reachable(i) }, ans !== undefined ? '✓' : '?')));
@@ -191,6 +196,20 @@ export async function viewLesson(main, id, previewTrack) {
     drawStep();
   }
 
+  /** Facts to know before a step, one screen on their own, read aloud on request. */
+  function learnPane(item) {
+    const s = item.learn;
+    const all = () => s.learn.map((f) => f.text).join(' ');
+    if (getSettings().autoRead) speak(all());
+    return h('div.stack',
+      h('p.eyebrow', `Learn first · Step ${item.n + 1} of ${steps.length}: ${s.title}`),
+      h('div.read-row', h('h2', { tabindex: '-1' }, 'Here\'s what to know'), readButton(all, 'Read these facts aloud')),
+      h('ul.learn-facts', s.learn.map((f) => h('li', h('span.learn-icon', { 'aria-hidden': 'true' }, f.icon), h('span', f.text)))),
+      h('div.row.step-nav',
+        at > 0 && h('button.btn', { type: 'button', onclick: () => { at--; drawStep(); } }, 'Back'),
+        h('button.btn.primary', { type: 'button', onclick: () => { at++; drawStep(); } }, 'Got it')));
+  }
+
   function checkPane(item) {
     const c = item.check;
     const answered = answers[CHECKS_KEY][item.key] !== undefined;
@@ -255,7 +274,7 @@ export async function viewLesson(main, id, previewTrack) {
     if (n > furthest) { furthest = n; markDirty(); }
     drawDots();
     const item = flow[at];
-    fill(box, at >= flow.length ? finishPane() : item.check ? checkPane(item) : stepPane(item));
+    fill(box, at >= flow.length ? finishPane() : item.check ? checkPane(item) : item.learn ? learnPane(item) : stepPane(item));
     box.querySelector('h2')?.focus?.();
     window.scrollTo?.({ top: 0 });
   }

@@ -279,3 +279,40 @@ test('skin colors are one set with no locks', () => {
   assert.equal(SLOTS.skin.locks, undefined);
   assert.ok(!unlockables().some((u) => u.slot === 'skin'));
 });
+
+test('Learn screens stay short: up to 3 facts, each 20 words or fewer, each with a picture', () => {
+  let count = 0;
+  for (const l of LESSONS) {
+    for (const s of allSteps(l)) {
+      if (!s.learn) continue;
+      count++;
+      assert.ok(s.learn.length >= 1 && s.learn.length <= 3, `${l.id}/${s.id} has ${s.learn.length} facts`);
+      for (const f of s.learn) {
+        assert.ok(f.icon, `${l.id}/${s.id} fact needs a picture`);
+        assert.ok(wordCount(f.text) <= 20, `${l.id}/${s.id}: "${f.text}" has ${wordCount(f.text)} words`);
+      }
+    }
+  }
+  assert.ok(count >= 15, 'most steps that ask students to apply new ideas teach them first');
+});
+
+test('the facts check questions rely on are taught before the question', () => {
+  // Each pair: a check question, and words that must appear on an earlier Learn screen, card, or instruction.
+  const taught = [
+    ['l3', 'Why is a game copied into RAM before it runs?', 'faster'],
+    ['l3', 'You type a story, and the power goes out before you save. Where was it?', 'wiped'],
+    ['l4', 'How many different values can one byte hold?', '256'],
+    ['l4', 'How does a computer store a letter like A?', 'number'],
+    ['l4', 'About how many megabytes are in one gigabyte?', '1,000 MB'],
+    ['l4', 'Why do photos and songs use different file types?', 'different kind of content'],
+    ['l1', 'A touchscreen does which two jobs?', 'two jobs'],
+  ];
+  for (const [id, q, words] of taught) {
+    const l = LESSONS.find((x) => x.id === id);
+    const check = l.checks.find((c) => c.q === q);
+    assert.ok(check, q);
+    const upTo = l.steps.findIndex((s) => s.id === check.after);
+    const before = l.steps.slice(0, upTo + 1).map((s) => [s.say, ...(s.learn || []).map((f) => f.text), ...((s.activity.cards || []).map((c) => c.text))].join(' ')).join(' ');
+    assert.ok(before.includes(words), `"${q}" needs "${words}" taught first`);
+  }
+});

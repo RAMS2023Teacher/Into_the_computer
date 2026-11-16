@@ -56,6 +56,8 @@ Plain ES modules with no framework. `tools/build.mjs` bundles `js/main.js` with 
 
 `js/curriculum/lessons.js` holds the five lessons. Lesson 5 is the project, one class period: a `choose` step picks a track (`design` or `history`), each with its own steps, rubric, and stretch goals. Design parts and prices are in `js/curriculum/catalog.js` (`estimate: true` marks a typical price where no current one was found); history computers each have a Kiddle and a Wikipedia link. `stepsFor(lesson, track)` gives the steps a student sees.
 
+A step that needs facts students haven't met yet has `learn`: up to 3 short facts (20 words or fewer each, with an emoji) shown on their own screen before the step. Teach before asking: an activity or check question must only rely on facts already shown in a Learn screen, an instruction, or a card. Don't hide them under "Why?", which is for the deeper reason. A test checks key check questions against what came before.
+
 Each step's `activity` has a `type`. `js/activities/logic.js` holds the rules for each type with no page code: `initial`, `isDone`, `solve`, and `summary` (what the teacher sees). `js/activities/ui.js` draws them. A new activity type needs all four rules and a renderer, and the tests will solve it and check that a fresh start isn't already done.
 
 The tests enforce: step minutes plus `finishMins` equal the lesson's minutes for every track, word limits, three choices per check question with right answers spread across positions, a three-row rubric scored 1 to 4, an alignment entry with standards that exist, and models that exist.
